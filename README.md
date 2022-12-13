@@ -3,7 +3,7 @@
 A Pegasus Workflow for running [Alphafold](https://github.com/deepmind/alphafold) model's inference pipeline regarding protein structure
 prediction. The current workflow is regarding the Multiple Sequence Alignment (MSA) and 
 Feature Generation steps, which produce a `features.pkl` file that can be later used in protein structure inference
-stage using the Alphafold model parameters. The workflow is currently limited to the Alphafold `monomer-system` model preset by default.
+stage using the Alphafold model parameters. The workflow is currently limited to the Alphafold `monomer-system` model preset by default. 
 
 ## Container
 
@@ -92,3 +92,7 @@ For example:
 ```
 $ /data/generate_small_data.py uniref90.fasts 5000 small_uniref90.fasta
 ```
+
+:ledger: **Note:** Workflow statistics have been shown in the `alphafold_workflow_main.ipynb` notebook, this sample workflow run used `GA98`
+as input sequence rather than `T1050` sequence used originally in the CASP14 by Alphafold. Thus, workflow execution time may vary depending upon
+the input sequence used.
