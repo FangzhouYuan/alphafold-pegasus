@@ -64,7 +64,7 @@ The jobs and tools used in the workflow are explained below:
 *   `hhblits_bfd` – runs hhblits tool on the BFD database to produce MSAs
 *   `hhsearch_pdb70` - runs hhsearch tool on PDB70 database to produce search templates
 *   `msa_features` – turns the MSA results into dicts of features
-*   `features_summary` – contains a summary of info reagrding all MSAs produced
+*   `features_summary` – contains a summary of info reagarding all MSAs produced
 *   `combine_features` – combines all MSA features, sequence features and templates into features file `features.pkl`
 
 
@@ -82,3 +82,5 @@ To submit a workflow run :
     --bfd-db-path=/path/to/bfd_db 
 ```
 
+:ledger: **Note:** It's recommended to first test run the workflow on very small partial databases `UniRef90`,`Mgnify` and `BFD`, some samples
+are already included in `/data/small_data` directory. Small partial databases can be created using the `generate_small_data.py` script in `/data/small_data`, be default it is set to generate one file containing 500 sequences which can be changed.
