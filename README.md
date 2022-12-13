@@ -83,4 +83,12 @@ To submit a workflow run :
 ```
 
 :ledger: **Note:** It's recommended to first test run the workflow on very small partial databases `UniRef90`,`Mgnify` and `BFD`, some samples
-are already included in `/data/small_data` directory. Small partial databases can be created using the `generate_small_data.py` script in `/data/small_data`, be default it is set to generate one file containing 500 sequences which can be changed.
+are already included in `/data/small_data` directory with 500 sequences in each file. Small partial databases can be created using the `generate_small_data.py` script in `/data/small_data` as follows: 
+
+```
+$ /data/generate_small_data.py <FASTA_FILE> <NO_OF_SEQUENCES> <NEW_FILE_NAME>
+```
+For example:
+```
+$ /data/generate_small_data.py uniref90.fasts 5000 small_uniref90.fasta
+```
