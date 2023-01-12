@@ -3,7 +3,8 @@
 A Pegasus Workflow for running [Alphafold](https://github.com/deepmind/alphafold) model's inference pipeline regarding protein structure
 prediction. The current workflow is regarding the Multiple Sequence Alignment (MSA) and 
 Feature Generation steps, which produce a `features.pkl` file that can be later used in protein structure inference
-stage using the Alphafold model parameters. The workflow is currently limited to the Alphafold `monomer-system` model preset by default. 
+stage using the Alphafold model parameters. The workflow is currently limited to the Alphafold `monomer-system` model preset by default.
+The workflow is set to run in `sharedfs` mode with no input staging and symlinking turned on.  
 
 ## Container
 
@@ -27,6 +28,9 @@ The container comes with the following main tools along with other common librar
 * dm-tree==0.1.6 
 * immutabledict==2.0.0 
 
+:ledger: **Note:** If you are running the workflow on ACCESS, it's recommended to build the container on execute site for reduced execution time.
+For example, if your execute site is `PSC Bridges2`, you can `$ cd` into your project directory and build the container following
+the above steps. Then set complete path to the container in `alphafold_workflow.py` or `alphafold_workflow_main.ipynb` files.
 
 ## Genetic databases
 If your machine has `aria2c` installed in it, then it's recommended to use Alphafold's provided database download scripts over 
@@ -41,6 +45,11 @@ The following databases are used in the workflow :
 ```
 $ /data/download_all_data.sh -d <DOWNLOAD_DIRECTORY>
 ```
+
+:ledger: **Note:** If you are running the workflow on ACCESS, please download the data on execute site in order to avoid staging of data.
+For example, if your execute site is `PSC Bridges2`, you can `$ cd` into your project directory and download the databases there following
+the above steps.
+
 :ledger: **Note:** By default the `download_all_data.sh` script is set to download the reduced version of databases (of size 600 GB). 
 If you want to download the full version of databases (of size 2.2 TB), `full_dbs` option can be entered as follows :
 
@@ -96,3 +105,11 @@ $ /data/generate_small_data.py uniref90.fasts 5000 small_uniref90.fasta
 :ledger: **Note:** Workflow statistics have been shown in the `alphafold_workflow_main.ipynb` notebook, this sample workflow run used `GA98`
 as input sequence rather than `T1050` sequence used originally in the CASP14 by Alphafold. Thus, workflow execution time may vary depending upon
 the input sequence used.
+
+## Workflow statistics
+
+The following table shows workflow wall time corresponding to different setup and size of databases:
+| Setup | Partial Database (~70GB) | Complete Database (~600GB) |
+| :---         |     :---:      |          :---: |
+| Local machine   | 18 min, 23 secs     | --    |
+| PSC Bridges 2     | 4 min, 51 secs      | --      |

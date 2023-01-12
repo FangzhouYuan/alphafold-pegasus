@@ -20,7 +20,9 @@ def generate_wf(input_fasta_path: str,
     # --- Properties ---------------------------------------------------------------
     props = Properties()
     props["pegasus.monitord.encoding"] = "json"                                                                    
-    props["pegasus.mode"] = "development"
+    props["pegasus.transfer.links"] = "true"
+    props["pegasus.transfer.bypass.input.staging"] = "true"
+    props["pegasus.data.configuration"] = "nonsharedfs"                                                                    
     props.write()
     
     # --- Input files locations ---------------------------------------------------
@@ -29,48 +31,52 @@ def generate_wf(input_fasta_path: str,
     PDB70_DB_DIR = pdb70_db_path
     MGNIFY_DB_PATH = mgnify_db_path
     BFD_DB_PATH = bfd_db_path
+    EXECUTE_SITE_USERNAME =  ""       #Enter the username
+    EXECUTE_SITE_DIR = ""             #Enter the path to directory on execute site (PSC)
+    SSH_KEY_FILE = ""                 #Enter the path to ssh private key on submit host
+    CONTAINER_PATH = ""               #Either a docker URL or Path to .sif file on execute site (PSC)
     
     # --- Replicas -----------------------------------------------------------------
     rc = ReplicaCatalog()
 
     protein_sequence_input = File("GA98.fasta")
-    rc.add_replica("local",protein_sequence_input,INPUT_FASTA_FILE)
+    rc.add_replica("condorpool",protein_sequence_input,INPUT_FASTA_FILE)
 
     uniref90_db = File("uniref90.fasta")
-    rc.add_replica("local",uniref90_db,UNIREF90_DB_PATH)
+    rc.add_replica("condorpool",uniref90_db,UNIREF90_DB_PATH)
 
     pdb1 = File("md5sum")
-    rc.add_replica("local",pdb1,PDB70_DB_DIR/"md5sum")
+    rc.add_replica("condorpool",pdb1,PDB70_DB_DIR/"md5sum")
 
     pdb2 = File("pdb70_a3m.ffdata")
-    rc.add_replica("local",pdb2,PDB70_DB_DIR/"pdb70_a3m.ffdata")
+    rc.add_replica("condorpool",pdb2,PDB70_DB_DIR/"pdb70_a3m.ffdata")
 
     pdb3 = File("pdb70_a3m.ffindex")
-    rc.add_replica("local",pdb3,PDB70_DB_DIR/"pdb70_a3m.ffindex")
+    rc.add_replica("condorpool",pdb3,PDB70_DB_DIR/"pdb70_a3m.ffindex")
 
     pdb4 = File("pdb70_clu.tsv")
-    rc.add_replica("local",pdb4,PDB70_DB_DIR/"pdb70_clu.tsv")
+    rc.add_replica("condorpool",pdb4,PDB70_DB_DIR/"pdb70_clu.tsv")
 
     pdb5 = File("pdb70_cs219.ffdata")
-    rc.add_replica("local",pdb5,PDB70_DB_DIR/"pdb70_cs219.ffdata")
+    rc.add_replica("condorpool",pdb5,PDB70_DB_DIR/"pdb70_cs219.ffdata")
 
     pdb6 = File("pdb70_cs219.ffindex")
-    rc.add_replica("local",pdb6,PDB70_DB_DIR/"pdb70_cs219.ffindex")
+    rc.add_replica("condorpool",pdb6,PDB70_DB_DIR/"pdb70_cs219.ffindex")
 
     pdb7 = File("pdb70_hhm.ffdata")
-    rc.add_replica("local",pdb7,PDB70_DB_DIR/"pdb70_hhm.ffdata")
+    rc.add_replica("condorpool",pdb7,PDB70_DB_DIR/"pdb70_hhm.ffdata")
 
     pdb8 = File("pdb70_hhm.ffindex")
-    rc.add_replica("local",pdb8,PDB70_DB_DIR/"pdb70_hhm.ffindex")
+    rc.add_replica("condorpool",pdb8,PDB70_DB_DIR/"pdb70_hhm.ffindex")
 
     pdb9 = File("pdb_filter.dat")
-    rc.add_replica("local",pdb9,PDB70_DB_DIR/"pdb_filter.dat")
+    rc.add_replica("condorpool",pdb9,PDB70_DB_DIR/"pdb_filter.dat")
 
     mgnify_db = File("mgnify.fa")
-    rc.add_replica("local",mgnify_db,MGNIFY_DB_PATH)
+    rc.add_replica("condorpool",mgnify_db,MGNIFY_DB_PATH)
 
     bfd_db = File("bfd.fasta")
-    rc.add_replica("local",bfd_db,BFD_DB_PATH)
+    rc.add_replica("condorpool",bfd_db,BFD_DB_PATH)
 
     rc.write()
     
@@ -90,11 +96,16 @@ def generate_wf(input_fasta_path: str,
                         )
 
     condorpool = Site("condorpool")\
-                .add_condor_profile(universe="vanilla")\
+                .add_directories(
+                        Directory(Directory.SHARED_SCRATCH, '/ocean/projects/asc190039p/zalam1', shared_file_system=True)
+                            .add_file_servers(FileServer("scp://"+EXECUTE_SITE_USERNAME+"@bridges2.psc.edu/"EXECUTE_SITE_DIR, Operation.ALL))
+                        )\
                 .add_pegasus_profile(
                     style="condor",
-                    data_configuration="condorio"
-                )
+                    data_configuration="nonsharedfs"
+                )\
+                .add_env(key="PEGASUS_HOME", value="/usr")\
+                .add_profiles(Namespace.PEGASUS, key="SSH_PRIVATE_KEY", value=SSH_KEY_FILE)
 
     sc.add_sites(local,condorpool)
     sc.write()
@@ -106,8 +117,8 @@ def generate_wf(input_fasta_path: str,
     singularity_container = Container(
                   "singularity-container",
                   Container.SINGULARITY,
-                  image="path/to/my_container.sif",
-                  image_site="local",
+                  image=CONTAINER_PATH,
+                  image_site="condorpool",
                   bypass_staging=True
                )
     tc.add_containers(singularity_container)
@@ -115,7 +126,7 @@ def generate_wf(input_fasta_path: str,
 
     sequence_features = Transformation(
                 "sequence_features",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/sequence_features.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -125,7 +136,7 @@ def generate_wf(input_fasta_path: str,
 
     jackhmmer_uniref90 = Transformation(
                 "jackhmmer_uniref90",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/jackhmmer_uniref90.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -136,7 +147,7 @@ def generate_wf(input_fasta_path: str,
 
     hhsearch_pdb70 = Transformation(
                 "hhsearch_pdb70",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/hhsearch_pdb70.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -147,7 +158,7 @@ def generate_wf(input_fasta_path: str,
 
     jackhmmer_mgnify = Transformation(
                 "jackhmmer_mgnify",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/jackhmmer_mgnify.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -158,7 +169,7 @@ def generate_wf(input_fasta_path: str,
 
     hhblits_bfd = Transformation(
                 "hhblits_bfd",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/hhblits_bfd.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -169,7 +180,7 @@ def generate_wf(input_fasta_path: str,
 
     msa_features = Transformation(
                 "msa_features",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/msa_features.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -179,7 +190,7 @@ def generate_wf(input_fasta_path: str,
 
     features_summary = Transformation(
                 "features_summary",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/features_summary.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
@@ -188,7 +199,7 @@ def generate_wf(input_fasta_path: str,
 
     combine_features = Transformation(
                 "combine_features",
-                site="condorpool",
+                site="local",
                 pfn= WF_DIR/"bin/combine_features.py",
                 is_stageable=True,
                 arch=Arch.X86_64,
