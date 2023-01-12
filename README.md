@@ -113,3 +113,5 @@ The following table shows workflow wall time corresponding to different setup an
 | :---         |     :---:      |          :---: |
 | Local machine   | 18 min, 23 secs     | --    |
 | PSC Bridges 2     | 4 min, 51 secs      | --      |
+
+:ledger: **Note:** In both cases workflow is set to run in `sharedfs` configuration with no input staging and symlinking is turned on.
