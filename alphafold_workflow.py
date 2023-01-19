@@ -15,7 +15,8 @@ def generate_wf(input_fasta_path: str,
                 pdb70_db_path: str,
                 mgnify_db_path: str,
                 bfd_db_path: str,
-                use_large_bfd: bool
+                use_large_bfd: bool,
+                use_psc: bool
                ):
     # --- Properties ---------------------------------------------------------------
     props = Properties()
@@ -36,47 +37,52 @@ def generate_wf(input_fasta_path: str,
     SSH_KEY_FILE = ""                 #Enter the path to ssh private key on submit host
     CONTAINER_PATH = ""               #Either a docker URL or Path to .sif file on execute site (PSC)
     
+    if use_psc:
+        EXECUTE_SITE = "psc"
+    else:
+        EXECUTE_SITE = "condorpool"
+    
     # --- Replicas -----------------------------------------------------------------
     rc = ReplicaCatalog()
 
     protein_sequence_input = File("GA98.fasta")
-    rc.add_replica("condorpool",protein_sequence_input,INPUT_FASTA_FILE)
+    rc.add_replica(EXECUTE_SITE,protein_sequence_input,INPUT_FASTA_FILE)
 
     uniref90_db = File("uniref90.fasta")
-    rc.add_replica("condorpool",uniref90_db,UNIREF90_DB_PATH)
+    rc.add_replica(EXECUTE_SITE,uniref90_db,UNIREF90_DB_PATH)
 
     pdb1 = File("md5sum")
-    rc.add_replica("condorpool",pdb1,PDB70_DB_DIR/"md5sum")
+    rc.add_replica(EXECUTE_SITE,pdb1,PDB70_DB_DIR/"md5sum")
 
     pdb2 = File("pdb70_a3m.ffdata")
-    rc.add_replica("condorpool",pdb2,PDB70_DB_DIR/"pdb70_a3m.ffdata")
+    rc.add_replica(EXECUTE_SITE,pdb2,PDB70_DB_DIR/"pdb70_a3m.ffdata")
 
     pdb3 = File("pdb70_a3m.ffindex")
-    rc.add_replica("condorpool",pdb3,PDB70_DB_DIR/"pdb70_a3m.ffindex")
+    rc.add_replica(EXECUTE_SITE,pdb3,PDB70_DB_DIR/"pdb70_a3m.ffindex")
 
     pdb4 = File("pdb70_clu.tsv")
-    rc.add_replica("condorpool",pdb4,PDB70_DB_DIR/"pdb70_clu.tsv")
+    rc.add_replica(EXECUTE_SITE,pdb4,PDB70_DB_DIR/"pdb70_clu.tsv")
 
     pdb5 = File("pdb70_cs219.ffdata")
-    rc.add_replica("condorpool",pdb5,PDB70_DB_DIR/"pdb70_cs219.ffdata")
+    rc.add_replica(EXECUTE_SITE,pdb5,PDB70_DB_DIR/"pdb70_cs219.ffdata")
 
     pdb6 = File("pdb70_cs219.ffindex")
-    rc.add_replica("condorpool",pdb6,PDB70_DB_DIR/"pdb70_cs219.ffindex")
+    rc.add_replica(EXECUTE_SITE,pdb6,PDB70_DB_DIR/"pdb70_cs219.ffindex")
 
     pdb7 = File("pdb70_hhm.ffdata")
-    rc.add_replica("condorpool",pdb7,PDB70_DB_DIR/"pdb70_hhm.ffdata")
+    rc.add_replica(EXECUTE_SITE,pdb7,PDB70_DB_DIR/"pdb70_hhm.ffdata")
 
     pdb8 = File("pdb70_hhm.ffindex")
-    rc.add_replica("condorpool",pdb8,PDB70_DB_DIR/"pdb70_hhm.ffindex")
+    rc.add_replica(EXECUTE_SITE,pdb8,PDB70_DB_DIR/"pdb70_hhm.ffindex")
 
     pdb9 = File("pdb_filter.dat")
-    rc.add_replica("condorpool",pdb9,PDB70_DB_DIR/"pdb_filter.dat")
+    rc.add_replica(EXECUTE_SITE,pdb9,PDB70_DB_DIR/"pdb_filter.dat")
 
     mgnify_db = File("mgnify.fa")
-    rc.add_replica("condorpool",mgnify_db,MGNIFY_DB_PATH)
+    rc.add_replica(EXECUTE_SITE,mgnify_db,MGNIFY_DB_PATH)
 
     bfd_db = File("bfd.fasta")
-    rc.add_replica("condorpool",bfd_db,BFD_DB_PATH)
+    rc.add_replica(EXECUTE_SITE,bfd_db,BFD_DB_PATH)
 
     rc.write()
     
@@ -95,10 +101,10 @@ def generate_wf(input_fasta_path: str,
                             .add_file_servers(FileServer("file://" + local_storage_dir, Operation.ALL))
                         )
 
-    condorpool = Site("condorpool")\
+    psc = Site("psc")\
                 .add_directories(
-                        Directory(Directory.SHARED_SCRATCH, '/ocean/projects/asc190039p/zalam1', shared_file_system=True)
-                            .add_file_servers(FileServer("scp://"+EXECUTE_SITE_USERNAME+"@bridges2.psc.edu/"EXECUTE_SITE_DIR, Operation.ALL))
+                        Directory(Directory.SHARED_SCRATCH, EXECUTE_SITE_DIR, shared_file_system=True)
+                            .add_file_servers(FileServer("scp://"+EXECUTE_SITE_USERNAME+"@bridges2.psc.edu/"+EXECUTE_SITE_DIR, Operation.ALL))
                         )\
                 .add_pegasus_profile(
                     style="condor",
@@ -106,8 +112,15 @@ def generate_wf(input_fasta_path: str,
                 )\
                 .add_env(key="PEGASUS_HOME", value="/usr")\
                 .add_profiles(Namespace.PEGASUS, key="SSH_PRIVATE_KEY", value=SSH_KEY_FILE)
+                
+    condorpool = Site("condorpool")\
+                .add_condor_profile(universe="vanilla")\
+                .add_pegasus_profile(
+                    style="condor",
+                    data_configuration="condorio"
+                )
 
-    sc.add_sites(local,condorpool)
+    sc.add_sites(local,condorpool,psc)
     sc.write()
     
     # --- Transformations ----------------------------------------------------------
@@ -118,7 +131,7 @@ def generate_wf(input_fasta_path: str,
                   "singularity-container",
                   Container.SINGULARITY,
                   image=CONTAINER_PATH,
-                  image_site="condorpool",
+                  image_site=EXECUTE_SITE,
                   bypass_staging=True
                )
     tc.add_containers(singularity_container)
@@ -299,6 +312,9 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description="Generates Pegasus Alphafold workflow")
     
+    parser.add_argument('--psc',dest='use_psc_site', help='This option is used when running on ACCESS and PSC Bridges',
+                        action='store_true')
+    
     parser.add_argument('--input-fasta-file', dest='input_fasta_file', default=None, required=True,
                         help='Path to the input FASTA file containing one protein sequence')
     
@@ -324,7 +340,8 @@ if __name__ == '__main__':
                     pdb70_db_path = Path(args.pdb70_db_dir).resolve(),
                     mgnify_db_path = Path(args.mgnify_db_path).resolve(),
                     bfd_db_path = Path(args.bfd_db_path).resolve(),
-                    use_large_bfd = args.use_large_bfd
+                    use_large_bfd = args.use_large_bfd,
+                    use_psc = args.use_psc_site
                    )
                    
     

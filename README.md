@@ -6,7 +6,7 @@ Feature Generation steps, which produce a `features.pkl` file that can be later 
 stage using the Alphafold model parameters. The workflow is currently limited to the Alphafold `monomer-system` model preset by default.
 The workflow is set to run in `sharedfs` mode with no input staging and symlinking turned on.  
 
-## Steps to setup ACCESS resources
+## Steps for setup on ACCESS resources
 If you are planning to run the workflow on ACCESS resources with [PSC Bridges](https://ondemand.bridges2.psc.edu.) as the resource allocation provider, please follow the steps shown below :
 * To get started, point your browser to https://access.pegasus.isi.edu and log in using the ACCESS Pegasus credentials.
   Use the [ACCESS Pegasus Documentation](https://access-ci.atlassian.net/wiki/spaces/ACCESSdocumentation/pages/129140407/ACCESS+Pegasus)
@@ -14,7 +14,7 @@ If you are planning to run the workflow on ACCESS resources with [PSC Bridges](h
   to  execute the sample workflows first listed in the documentation in order to avoid any errors, they are simple and easy to execute.
 * After the setup is complete and you are able to run the sample ACCESS-Pegasus workflows successfully, next we need to configure a new SSH key to be
   used for file transfers(by `scp` protocol) in our Alphafold workflow. Go to homepage on https://access.pegasus.isi.edu, then open up a 
-  shell navigating `Clusters --> Shell Access`.
+  shell navigating `Clusters --> Shell Access`. Generate a new SSH key as follows:
   ```
   $ cd .ssh
   $ ssh-keygen -t rsa
@@ -24,7 +24,45 @@ If you are planning to run the workflow on ACCESS resources with [PSC Bridges](h
   has to be submitted using PSC Bridges Key Management system. Copy the contents of file `id_rsa.pub` and login to [PSC SSH Key Manager](https://grants.psc.edu/cgi-bin/ssh/listKeys.pl) using the PSC Bridges login credentials. Click on `Submit New Key` and paste the public key copied
   from `id_rsa.pub` file in the `Paste Key` section and then submit it. For more info on PSC SSH Key Management, you can refer to their website : 
   https://www.psc.edu/about-using-ssh/. It takes a couple of hours for the SSH key to be configured on their system.
-* The next step is to setup a container to be used in the workflow.
+* The next step is to setup a container to be used in the workflow. Open up shell on PSC Bridges by logging into  
+  [PSC Bridges](https://ondemand.bridges2.psc.edu.), then navigating `Clusters --> Shell Access`. Go to your username directory in the RM storage 
+  on PSC and clone the Alphafold repository there :
+  ```
+  $ cd /ocean/projects/<groupname>/<username>/
+  $ git clone https://github.com/pegasus-isi/alphafold-pegasus.git
+  $ cd alphafold-pegasus
+  ```
+  Then create a singularity container as follows: 
+  ```
+  $ docker build -t local/alphafold_container .
+  $ singularity build alphafold_container.sif docker-daemon://local/alphafold_container
+  ```
+  Make note of the absolute path to the conatiner as it will be used in the Alphafold workflow later. More information and notes regarding the 
+  container step can be found in the Container section below.
+* The next step is to setup a data directory and download all the genetic databases there as follows:
+  ```
+  $ cd /ocean/projects/<groupname>/<username>/
+  $ mkdir data
+  $ /ocean/projects/<groupname>/<username>/alphafold-pegasus/data/download_all_data.sh -d /ocean/projects/<groupname>/<username>/data
+  ```
+  This is a time consuming step and takes somewhere between 6 hours to 8 hours, so please make sure that the session doesn't time out.
+  More information and notes regarding data download step can be found in the Genetic Databases section below. 
+* Finally we submit and run the workflow from ACCESS-pegasus. Login using your credentials on https://access.pegasus.isi.edu, then open up a 
+  shell navigating `Clusters --> Shell Access`, clone this repository and run the `alphafold_workflow.py` script as follows :
+  ```
+  $ git clone https://github.com/pegasus-isi/alphafold-pegasus.git
+  $ cd alphafold-pegasus
+  $ python3 alphafold_workflow.py \
+    --psc \
+    --input-fasta-file=/ocean/projects/<groupname>/<username>/alphafold-pegasus/input/GA98.fasta \
+    --uniref90-db-path=/ocean/projects/<groupname>/<username>/data/uniref90 \
+    --pdb70-db-dir=/ocean/projects/<groupname>/<username>/data/pdb70 \
+    --mgnify-db-path=/ocean/projects/<groupname>/<username>/data/mgnify \
+    --bfd-db-path=/ocean/projects/<groupname>/<username>/data/bfd
+  ```
+  The `--psc` option is used because the compute site for this steup is PSC Bridges, this option is not required when running on a local machine.
+  Please make sure that paths to the genetic databases are entered correctly. Some workflow statistics have been shown below for reference.
+
 
 ## Container
 
