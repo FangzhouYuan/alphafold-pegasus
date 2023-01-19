@@ -6,6 +6,26 @@ Feature Generation steps, which produce a `features.pkl` file that can be later 
 stage using the Alphafold model parameters. The workflow is currently limited to the Alphafold `monomer-system` model preset by default.
 The workflow is set to run in `sharedfs` mode with no input staging and symlinking turned on.  
 
+## Steps to setup ACCESS resources
+If you are planning to run the workflow on ACCESS resources with [PSC Bridges](https://ondemand.bridges2.psc.edu.) as the resource allocation provider, please follow the steps shown below :
+* To get started, point your browser to https://access.pegasus.isi.edu and log in using the ACCESS Pegasus credentials.
+  Use the [ACCESS Pegasus Documentation](https://access-ci.atlassian.net/wiki/spaces/ACCESSdocumentation/pages/129140407/ACCESS+Pegasus)
+  to configure a basic setup for [ACCESS Pegasus workflows](https://github.com/pegasus-isi/ACCESS-Pegasus-Examples). It's recommended that you try
+  to  execute the sample workflows first listed in the documentation in order to avoid any errors, they are simple and easy to execute.
+* After the setup is complete and you are able to run the sample ACCESS-Pegasus workflows successfully, next we need to configure a new SSH key to be
+  used for file transfers(by `scp` protocol) in our Alphafold workflow. Go to homepage on https://access.pegasus.isi.edu, then open up a 
+  shell navigating `Clusters --> Shell Access`.
+  ```
+  $ cd .ssh
+  $ ssh-keygen -t rsa
+  ```
+  Make note of absolute path to the private SSH key file `id_rsa`, as this path will be used our Alphafold workflow.
+  Since PSC Bridges doesn't allow to configure new SSH keys simply by saving the public key in a file using the shell, the public key
+  has to be submitted using PSC Bridges Key Management system. Copy the contents of file `id_rsa.pub` and login to [PSC SSH Key Manager](https://grants.psc.edu/cgi-bin/ssh/listKeys.pl) using the PSC Bridges login credentials. Click on `Submit New Key` and paste the public key copied
+  from `id_rsa.pub` file in the `Paste Key` section and then submit it. For more info on PSC SSH Key Management, you can refer to their website : 
+  https://www.psc.edu/about-using-ssh/. It takes a couple of hours for the SSH key to be configured on their system.
+* The next step is to setup a container to be used in the workflow.
+
 ## Container
 
 The workflow uses a singularity container in order to execute all jobs. It is recommended to build a local container (in a `.sif` file) using the
