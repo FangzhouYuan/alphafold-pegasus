@@ -8,7 +8,7 @@ import sys
 import os
 
 logging.basicConfig(level=logging.DEBUG)
-
+WF_DIR = Path(".").resolve()
 
 def generate_wf(input_fasta_path: str, 
                 uniref90_db_path: str,
